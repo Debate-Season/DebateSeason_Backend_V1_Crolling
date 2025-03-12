@@ -1,6 +1,7 @@
 package com.debate.croll.scheduler;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Random;
 
 import org.openqa.selenium.By;
@@ -11,8 +12,8 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.debate.croll.domain.YoutubeRepository;
-import com.debate.croll.domain.entity.Youtube;
+import com.debate.croll.domain.entity.Media;
+import com.debate.croll.repository.MediaRepository;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 @Component
 public class YoutubeScheduler {
 
-	private final YoutubeRepository youtubeRepository;
+	private final MediaRepository mediaRepository;
 
 	@Scheduled(cron = "0 0 17 * * ?",zone = "Asia/Seoul")
 	public synchronized void doCroll() throws InterruptedException {
@@ -51,74 +52,29 @@ public class YoutubeScheduler {
 
 		driver.get("https://www.youtube.com/feed/trending");
 
-		// 1.
-		WebElement element1 = driver.findElement(By.xpath("/html/body/ytd-app/div[1]/ytd-page-manager/ytd-browse/ytd-two-column-browse-results-renderer/div[1]/ytd-section-list-renderer/div[2]/ytd-item-section-renderer[1]/div[3]/ytd-shelf-renderer/div[1]/div[2]/ytd-expanded-shelf-contents-renderer/div/ytd-video-renderer[1]/div[1]/div/div[1]/div/h3/a"));
-		String herf1 = element1.getAttribute("href");
-		String title1 = element1.getAttribute("title");
-		Youtube youtube1 = Youtube.builder()
-			.url(herf1)
-			.title(title1)
-			.createdAt(now)
-			.media("youtube")
-			.build()
-			;
-
-		//
-		WebElement element2 = driver.findElement(By.xpath("/html/body/ytd-app/div[1]/ytd-page-manager/ytd-browse/ytd-two-column-browse-results-renderer/div[1]/ytd-section-list-renderer/div[2]/ytd-item-section-renderer[1]/div[3]/ytd-shelf-renderer/div[1]/div[2]/ytd-expanded-shelf-contents-renderer/div/ytd-video-renderer[2]/div[1]/div/div[1]/div/h3/a"));
-		String herf2 = element2.getAttribute("href");
-		String title2 = element2.getAttribute("title");
-		Youtube youtube2 = Youtube.builder()
-			.url(herf2)
-			.title(title2)
-			.createdAt(now)
-			.media("youtube")
-			.build()
-			;
 
 
-		WebElement element3 = driver.findElement(By.xpath("/html/body/ytd-app/div[1]/ytd-page-manager/ytd-browse/ytd-two-column-browse-results-renderer/div[1]/ytd-section-list-renderer/div[2]/ytd-item-section-renderer[3]/div[3]/ytd-shelf-renderer/div[1]/div[2]/ytd-expanded-shelf-contents-renderer/div/ytd-video-renderer[1]/div[1]/div/div[1]/div/h3/a"));
-		String herf3 = element3.getAttribute("href");
-		String title3 = element3.getAttribute("title");
-		Youtube youtube3 = Youtube.builder()
-			.url(herf3)
-			.title(title3)
-			.createdAt(now)
-			.media("youtube")
-			.build()
-			;
+		// 컨테이너 통째로 가져오는 법 찾아 볼 것
+		List<WebElement> elementList = driver.findElements(By.cssSelector("#grid-container"));
 
 
-		WebElement element4 = driver.findElement(By.xpath("/html/body/ytd-app/div[1]/ytd-page-manager/ytd-browse/ytd-two-column-browse-results-renderer/div[1]/ytd-section-list-renderer/div[2]/ytd-item-section-renderer[3]/div[3]/ytd-shelf-renderer/div[1]/div[2]/ytd-expanded-shelf-contents-renderer/div/ytd-video-renderer[2]/div[1]/div/div[1]/div/h3/a"));
-		String herf4 = element4.getAttribute("href");
-		String title4 = element4.getAttribute("title");
-		Youtube youtube4 = Youtube.builder()
-			.url(herf4)
-			.title(title4)
-			.createdAt(now)
-			.media("youtube")
-			.build()
-			;
 
+		for(WebElement e : elementList){
+			WebElement webElement = e.findElement(By.cssSelector("#video-title"));
 
-		WebElement element5 = driver.findElement(By.xpath("/html/body/ytd-app/div[1]/ytd-page-manager/ytd-browse/ytd-two-column-browse-results-renderer/div[1]/ytd-section-list-renderer/div[2]/ytd-item-section-renderer[3]/div[3]/ytd-shelf-renderer/div[1]/div[2]/ytd-expanded-shelf-contents-renderer/div/ytd-video-renderer[3]/div[1]/div/div[1]/div/h3/a"));
-		String herf5 = element5.getAttribute("href");
-		String title5 = element5.getAttribute("title");
-		Youtube youtube5 = Youtube.builder()
-			.url(herf5)
-			.title(title5)
-			.createdAt(now)
-			.media("youtube")
-			.build()
-			;
+			String media = e.findElement(By.cssSelector("#text > a")).getText();
 
-		youtubeRepository.save(youtube1);
-		youtubeRepository.save(youtube2);
-		youtubeRepository.save(youtube3);
-		youtubeRepository.save(youtube4);
-		youtubeRepository.save(youtube5);
-
-	driver.quit();
-
-
+			Media youtube = Media.builder()
+				.title(webElement.getAttribute("title"))
+				.type("youtube")
+				.url(webElement.getAttribute("href"))
+				.createdAt(now)
+				.media(media)
+				.category("사회")
+				.build()
+				;
+			mediaRepository.save(youtube);
+		}
+		driver.quit();
 	}
 }

@@ -19,11 +19,12 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @Builder
-public class News {
+public class Media {
 
 	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
+	@Column(columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
 	private String title;
 
 	private String url;
@@ -31,6 +32,9 @@ public class News {
 	private String category;
 
 	private String media;
+
+	private String type;// news, community, youtube
+
 
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)

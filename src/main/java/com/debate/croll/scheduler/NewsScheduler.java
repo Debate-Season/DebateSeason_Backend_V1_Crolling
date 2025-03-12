@@ -16,8 +16,10 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.debate.croll.domain.NewsRepository;
-import com.debate.croll.domain.entity.News;
+
+import com.debate.croll.domain.entity.Media;
+import com.debate.croll.repository.MediaRepository;
+
 
 import io.github.bonigarcia.wdm.WebDriverManager;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +28,7 @@ import lombok.RequiredArgsConstructor;
 @Component
 public class NewsScheduler {
 
-	private final NewsRepository newsRepository;
-
+	private final MediaRepository mediaRepository;
 	@Scheduled(cron = "0 0 17 * * ?",zone = "Asia/Seoul")
 	public synchronized void doCroll() throws InterruptedException {
 
@@ -62,9 +63,9 @@ public class NewsScheduler {
 		// YTN    https://media.naver.com/press/052
 		// MBC    https://media.naver.com/press/214
 		// SBS    https://media.naver.com/press/055
-        // KBS    https://media.naver.com/press/056
+		// KBS    https://media.naver.com/press/056
 
-		List<Integer> category = Arrays.asList(100,101,102,105);
+		List<Integer> category = Arrays.asList(100,101,102,104);
 
 		Map<String,String> newsList = new HashMap<>();
 		newsList.put("한국경제","https://media.naver.com/press/015");
@@ -88,86 +89,87 @@ public class NewsScheduler {
 		LocalDateTime now = LocalDateTime.now().withNano(0);
 		// 분전(min),시간전(hour),일전(day)
 
-			for(String s : keys) {
+		for(String s : keys) {
 
-				String url = newsList.get(s);
+			String url = newsList.get(s);
 
-				for (Integer i : category) {
+			for (Integer i : category) {
 
-					driver = new ChromeDriver(options);
+				driver = new ChromeDriver(options);
 
-					driver.get(url + "?sid=" + i.toString());
+				driver.get(url + "?sid=" + i.toString());
 
-					for (int j = 1; j <= 2; j++) {
+				for (int j = 1; j <= 2; j++) {
 
-						// 1. Link
-						WebElement aTag = driver.findElement(
-							By.cssSelector("#ct > div._tab_panel > div:nth-child(1) > ul > li:nth-child("+j+") > a.press_edit_news_link._es_pc_link"));
-						String href = aTag.getAttribute("href");
+					// 1. Link
+					WebElement aTag = driver.findElement(
+						By.cssSelector("#ct > div._tab_panel > div:nth-child(1) > ul > li:nth-child("+j+") > a.press_edit_news_link._es_pc_link"));
+					String href = aTag.getAttribute("href");
 
-						// 2. title
-						WebElement titleElement = driver.findElement(By.cssSelector(
-							"#ct > div._tab_panel > div:nth-child(1) > ul > li:nth-child("+j+") > a.press_edit_news_link._es_pc_link > span.press_edit_news_text > span.press_edit_news_title"));
-						String title = titleElement.getText();
+					// 2. title
+					WebElement titleElement = driver.findElement(By.cssSelector(
+						"#ct > div._tab_panel > div:nth-child(1) > ul > li:nth-child("+j+") > a.press_edit_news_link._es_pc_link > span.press_edit_news_text > span.press_edit_news_title"));
+					String title = titleElement.getText();
 
-						// 2. time
-						WebElement timeElement = driver.findElement(By.cssSelector("#ct > div._tab_panel > div:nth-child(1) > ul > li:nth-child("+j+") > a > span.press_edit_news_text > span.r_ico_b.r_modify"));
-						String outdpated = timeElement.getText();
+					// 2. time
+					WebElement timeElement = driver.findElement(By.cssSelector("#ct > div._tab_panel > div:nth-child(1) > ul > li:nth-child("+j+") > a > span.press_edit_news_text > span.r_ico_b.r_modify"));
+					String outdpated = timeElement.getText();
 
-						LocalDateTime time = null;
-						// 분전(min),시간전(hour),일전(day)
+					LocalDateTime time = null;
+					// 분전(min),시간전(hour),일전(day)
 
-						if(outdpated.contains("분전")){
-							outdpated = outdpated.replace("분전","");
-							time = now.minusMinutes(Integer.parseInt(outdpated));
-						}
-						else if(outdpated.contains("시간전")){
-							outdpated = outdpated.replace("시간전","");
-							time = now.minusHours(Integer.parseInt(outdpated));
+					if(outdpated.contains("분전")){
+						outdpated = outdpated.replace("분전","");
+						time = now.minusMinutes(Integer.parseInt(outdpated));
+					}
+					else if(outdpated.contains("시간전")){
+						outdpated = outdpated.replace("시간전","");
+						time = now.minusHours(Integer.parseInt(outdpated));
 
-						}
-						else if(outdpated.contains("일전")){
-							outdpated = outdpated.replace("일전","");
-							time = now.minusDays(Integer.parseInt(outdpated));
+					}
+					else if(outdpated.contains("일전")){
+						outdpated = outdpated.replace("일전","");
+						time = now.minusDays(Integer.parseInt(outdpated));
 
-						}
-
-						// 카테고리 넣기
-						// 정치 https://media.naver.com/press/422?sid=100
-						// 경제 https://media.naver.com/press/422?sid=101
-						// 사회 https://media.naver.com/press/422?sid=102
-						// IT https://media.naver.com/press/422?sid=105
-						String categoryName = null;
-						if(i==100){
-							categoryName = "정치";
-						}
-						else if(i==101){
-							categoryName = "경제";
-						}
-						else if(i==102){
-							categoryName = "사회";
-						}
-						else if(i==105){
-							categoryName = "IT";
-						}
-
-						News news = News.builder()
-							.title(title)
-							.url(href)
-							.createdAt(time)
-							.category(categoryName)
-							.media(s)
-							.build()
-							;
-						newsRepository.save(news);
 					}
 
-					driver.quit();
+					// 카테고리 넣기
+					// 정치 https://media.naver.com/press/422?sid=100
+					// 경제 https://media.naver.com/press/422?sid=101
+					// 사회 https://media.naver.com/press/422?sid=102
+					// IT https://media.naver.com/press/422?sid=105
+					String categoryName = null;
+					if(i==100){
+						categoryName = "정치";
+					}
+					else if(i==101){
+						categoryName = "경제";
+					}
+					else if(i==102){
+						categoryName = "사회";
+					}
+					else if(i==104){
+						categoryName = "세계";
+					}
 
-					Thread.sleep(15000); // 15s에 1번씩 가져옴. 
-
+					Media news = Media.builder()
+						.title(title)
+						.url(href)
+						.createdAt(time)
+						.category(categoryName)
+						.media(s)
+						.type("news")
+						.build()
+						;
+					mediaRepository.save(news);
 				}
 
+				driver.quit();
+
+				Thread.sleep(15000); // 15s에 1번씩 가져옴.
+
 			}
+
 		}
+	}
 }
