@@ -7,6 +7,7 @@ import java.util.Random;
 
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -26,7 +27,7 @@ public class FmKorea {
 
 	private final MediaRepository mediaRepository;
 	@Scheduled(cron = "0 0 17 * * ?",zone = "Asia/Seoul")
-	public synchronized void doCroll() throws InterruptedException {
+	public void doCroll() throws InterruptedException {
 
 		WebDriverManager.chromedriver().setup();
 
@@ -52,7 +53,8 @@ public class FmKorea {
 		// LocalDateTime now = LocalDateTime.now().withNano(0);
 		// 분전(min),시간전(hour),일전(day)
 
-
+		// #bd_4180795_0 > div > div.fm_best_widget._bd_pc > ul > li:nth-child(2) > div > a:nth-child(2) > img
+		// #bd_4180795_0 > div > div.fm_best_widget._bd_pc > ul > li:nth-child(5) > div > a:nth-child(2) > img
 		WebDriver driver = new ChromeDriver(options);
 
 		// 정치/시사 + 인기
@@ -67,32 +69,57 @@ public class FmKorea {
 		// 오늘 YYYY-MM-DD
 		LocalDate today = LocalDate.now();
 
-		for(int i = 1 ; i<= 5 ; i++){
-			WebElement titleElement = driver.findElement(By.cssSelector("#bd_4180795_0 > div > div.fm_best_widget._bd_pc > ul > li:nth-child("+i+") > div > h3 > a"));
-			WebElement timeElement = driver.findElement(By.cssSelector("#bd_4180795_0 > div > div.fm_best_widget._bd_pc > ul > li:nth-child("+i+") > div > div:nth-child(5) > span.regdate"));
+		try {
+			for (int i = 1; i <= 5; i++) {
+				WebElement titleElement = driver.findElement(By.cssSelector(
+					"#bd_4180795_0 > div > div.fm_best_widget._bd_pc > ul > li:nth-child(" + i + ") > div > h3 > a"));
+				WebElement timeElement = driver.findElement(By.cssSelector(
+					"#bd_4180795_0 > div > div.fm_best_widget._bd_pc > ul > li:nth-child(" + i
+						+ ") > div > div:nth-child(5) > span.regdate"));
 
-			String timeString = today + " " + timeElement.getText();
+				String image = null;
 
-			// Create a DateTimeFormatter with the appropriate pattern
-			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+				// 이미지가 null이면 null인 상태로 넘어간다.
+				try {
+					WebElement imgElement = driver.findElement(By.cssSelector(
+						"#bd_4180795_0 > div > div.fm_best_widget._bd_pc > ul > li:nth-child(" + i
+							+ ") > div > a:nth-child(2) > img"));
 
-			// Parse the string to a LocalDateTime object
-			LocalDateTime dateTime = LocalDateTime.parse(timeString, formatter);
+					image = imgElement.getAttribute("src");
+				} catch (NoSuchElementException e) {// 이미지가 없는 경우 발동이 된다. 그냥 패스
 
-			Media fmKorea = Media.builder()
-				.title(titleElement.getText())
-				.url(titleElement.getAttribute("href"))
-				.media("에펨코리아")
-				.category("정치")
-				.type("community")
-				.createdAt(dateTime)
-				.build()
-				;
+				}
 
-			mediaRepository.save(fmKorea);
+				String timeString = today + " " + timeElement.getText();
+
+				// Create a DateTimeFormatter with the appropriate pattern
+				DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+				// Parse the string to a LocalDateTime object
+				LocalDateTime dateTime = LocalDateTime.parse(timeString, formatter);
+
+				Media fmKorea = Media.builder()
+					.title(titleElement.getText())
+					.url(titleElement.getAttribute("href"))
+					.src(image)
+					.category("정치")
+					.media("에펨코리아")
+					.type("community")
+					.count(0)
+					.createdAt(dateTime)
+					.build();
+
+				mediaRepository.save(fmKorea);
+			}
+		}
+		catch (Exception e){
+			throw new RuntimeException(e);
+		}
+		finally {
+			driver.quit();
 		}
 
-		driver.quit();
+
 
 	}
 }

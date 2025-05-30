@@ -1,7 +1,7 @@
-package com.debate.croll.scheduler;
+package com.debate.croll.scheduler.community;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.time.temporal.ChronoUnit;
 import java.util.Random;
 
 import org.openqa.selenium.By;
@@ -20,14 +20,14 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Component
-public class YoutubeScheduler {
+public class BoabaeDream {
 
 	private final MediaRepository mediaRepository;
 
 	@Scheduled(cron = "0 0 17 * * ?",zone = "Asia/Seoul")
-	public synchronized void doCroll() throws InterruptedException {
-		WebDriverManager.chromedriver().setup();
+	public void doCroll(){
 
+		WebDriverManager.chromedriver().setup();
 
 		// 랜덤 User-Agent 리스트
 		String[] userAgents = {
@@ -46,35 +46,51 @@ public class YoutubeScheduler {
 		options.addArguments("--disable-blink-features=AutomationControlled"); // 이거 false 나와야 자동화 회피 가능하다
 		options.addArguments("--disable-gpu"); // GPU 비활성화 (성능 개선)
 
-		LocalDateTime now = LocalDateTime.now().withNano(0);// 현재 크롤링 시간
-
 		WebDriver driver = new ChromeDriver(options);
 
-		driver.get("https://www.youtube.com/feed/trending");
+		driver.get("https://www.bobaedream.co.kr/list?code=best");
 
+		// #boardlist > tbody > tr:nth-child(1)
 
+		// title, a : #boardlist > tbody > tr:nth-child(1) > td.pl14 > a.bsubject
 
-		// 컨테이너 통째로 가져오는 법 찾아 볼 것
-		List<WebElement> elementList = driver.findElements(By.cssSelector("#grid-container"));
+		// time : #boardlist > tbody > tr:nth-child(1) > td.date
 
+		for(int i=1; i<=5; i++){
 
+			WebElement webElement = driver.findElement(By.cssSelector("#boardlist > tbody > tr:nth-child(+"+i+")"));
 
-		for(WebElement e : elementList){
-			WebElement webElement = e.findElement(By.cssSelector("#video-title"));
+			WebElement titleElement = webElement.findElement(By.cssSelector("td.pl14 > a.bsubject"));
 
-			String media = e.findElement(By.cssSelector("#text > a")).getText();
+			String title = titleElement.getText();
+			String href = titleElement.getAttribute("href");
 
-			Media youtube = Media.builder()
-				.title(webElement.getAttribute("title"))
-				.type("youtube")
-				.url(webElement.getAttribute("href"))
-				.createdAt(now)
-				.media(media)
+			String time = webElement.findElement(By.cssSelector("td.date")).getText();
+
+			LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+
+			// 문자열에서 시와 분 파싱
+			int hour = Integer.parseInt(time.split(":")[0]);
+			int minute = Integer.parseInt(time.split(":")[1]);
+
+			// 시:분만 21:42로 덮어쓰기, 초와 나노초는 유지
+			LocalDateTime replaced = now.withHour(hour).withMinute(minute);
+
+			Media boBaeDream = Media.builder()
+				.title(title)
+				.url(href)
+				.src(null)
 				.category("사회")
-				.build()
-				;
-			mediaRepository.save(youtube);
+				.media("보배드림")
+				.type("community")
+				.count(0)
+				.createdAt(replaced)
+				.build();
+
+			mediaRepository.save(boBaeDream);
+
 		}
-		driver.quit();
+
 	}
+
 }

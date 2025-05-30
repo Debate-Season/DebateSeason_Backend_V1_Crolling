@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 import com.debate.croll.domain.entity.Media;
 @Repository
 public interface MediaRepository extends JpaRepository<Media,Long> {
+
 }
